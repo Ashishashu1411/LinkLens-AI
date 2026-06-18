@@ -235,10 +235,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       chrome.storage.local.get(['apiUrl'], (res) => {
-        if (res.apiUrl) {
+        const isUrlValid = res.apiUrl && 
+                           !res.apiUrl.includes('localhost') && 
+                           !res.apiUrl.includes('127.0.0.1') && 
+                           res.apiUrl.endsWith('/api/analyze');
+
+        if (isUrlValid) {
           apiGatewayUrl = res.apiUrl;
         } else {
-          apiGatewayUrl = "https://linklens-ai-ssu5.onrender.com/api/analyze"
+          apiGatewayUrl = 'https://linklens-ai-ssu5.onrender.com/api/analyze';
+          chrome.storage.local.set({ apiUrl: apiGatewayUrl });
         }
         if (callback) callback();
       });
@@ -300,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (scanLoading) scanLoading.classList.add('hidden');
 
           if (chrome.runtime.lastError || !response) {
-            showScanError('CONNECTION FAILURE', 'Could not establish contact with LinkLens service worker.');
+            showScanError('CONNECTION FAILURE', `Could not establish contact with LinkLens service worker. (API: ${apiGatewayUrl})`);
             return;
           }
 
@@ -308,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
             saveScanToCacheAndHistory(currentUrl, response.data);
             renderScanResults(response.data);
           } else {
-            showScanError('SCAN FAILED', response.error || 'Server returned an invalid response.');
+            showScanError('SCAN FAILED', `${response.error || 'Server returned an invalid response.'} (API: ${apiGatewayUrl})`);
           }
         }
       );

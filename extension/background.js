@@ -61,7 +61,14 @@ async function handleUrlChange(tabId, url) {
     chrome.storage.local.get(['allowedUrls', 'scanCache', 'apiUrl'], async (res) => {
       const allowedUrls = res.allowedUrls || [];
       const cache = res.scanCache || {};
-      const apiGatewayUrl = res.apiUrl || DEFAULT_API_URL;
+      let apiGatewayUrl = res.apiUrl;
+      const isUrlValid = apiGatewayUrl && 
+                         !apiGatewayUrl.includes('localhost') && 
+                         !apiGatewayUrl.includes('127.0.0.1') && 
+                         apiGatewayUrl.endsWith('/api/analyze');
+      if (!isUrlValid) {
+        apiGatewayUrl = DEFAULT_API_URL;
+      }
 
       // 1. If domain is whitelisted by the user, bypass blocking (but show warning badge for awareness)
       const isWhitelisted = allowedUrls.includes(host);
@@ -163,7 +170,7 @@ function updateTabBadge(tabId, score, prediction) {
  * Sends a POST request to the API with an AbortController timeout.
  */
 async function performScan(targetUrl, apiEndpoint) {
-  const timeoutMs = 10000; // 10s
+  const timeoutMs = 60000; // 60s for Render free tier cold starts
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
 
