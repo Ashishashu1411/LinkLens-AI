@@ -11,7 +11,7 @@
   ],
   "host_permissions": [
     "http://localhost/*",
-    "http://127.0.0.1/*",
+    "https://linklens-ai-ssu5.onrender.com*",
     "<all_urls>"
   ],
   "action": {
@@ -28,8 +28,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_start"
     }
   ],

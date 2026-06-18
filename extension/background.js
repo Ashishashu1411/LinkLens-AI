@@ -5,13 +5,13 @@
  */
 
 // Global API default fallback
-const DEFAULT_API_URL = 'http://localhost:8000/api/analyze';
+const DEFAULT_API_URL = 'https://linklens-ai-ssu5.onrender.com';
 
 // Listen for messages from the popup panel (e.g. manual scan triggers)
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'SCAN_URL') {
     const { url, apiUrl } = request;
-    
+
     performScan(url, apiUrl)
       .then(response => {
         sendResponse({ success: true, data: response });
@@ -20,7 +20,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         console.error('[LinkLens SW] Manual Scan error:', error);
         sendResponse({ success: false, error: error.message });
       });
-      
+
     return true; // Keep message channel open for async response
   }
 });
@@ -70,7 +70,7 @@ async function handleUrlChange(tabId, url) {
       if (cache[url]) {
         const cachedData = cache[url];
         updateTabBadge(tabId, cachedData.risk_score, cachedData.prediction);
-        
+
         if (!isWhitelisted && (cachedData.prediction.toLowerCase().includes('phishing') || cachedData.risk_score >= 80)) {
           redirectToWarningPage(tabId, url, cachedData);
         }
@@ -84,10 +84,10 @@ async function handleUrlChange(tabId, url) {
       // 4. Perform background scan
       try {
         const scanData = await performScan(url, apiGatewayUrl);
-        
+
         // Cache result in storage
         cache[url] = scanData;
-        
+
         // Update history log in background
         chrome.storage.local.get(['scanHistory'], (histRes) => {
           let history = histRes.scanHistory || [];
@@ -99,7 +99,7 @@ async function handleUrlChange(tabId, url) {
             timestamp: Date.now()
           });
           if (history.length > 50) history = history.slice(0, 50);
-          
+
           chrome.storage.local.set({
             scanCache: cache,
             scanHistory: history
@@ -129,11 +129,11 @@ async function handleUrlChange(tabId, url) {
  * Redirects the tab to warning.html with serialized threat parameters.
  */
 function redirectToWarningPage(tabId, targetUrl, data) {
-  const warningUrl = chrome.runtime.getURL('warning.html') + 
-    `?url=${encodeURIComponent(targetUrl)}` + 
-    `&score=${data.risk_score}` + 
+  const warningUrl = chrome.runtime.getURL('warning.html') +
+    `?url=${encodeURIComponent(targetUrl)}` +
+    `&score=${data.risk_score}` +
     `&reasons=${encodeURIComponent(JSON.stringify(data.reasons))}`;
-    
+
   chrome.tabs.update(tabId, { url: warningUrl });
 }
 
@@ -142,10 +142,10 @@ function redirectToWarningPage(tabId, targetUrl, data) {
  */
 function updateTabBadge(tabId, score, prediction) {
   chrome.action.setBadgeText({ tabId: tabId, text: String(score) });
-  
+
   let badgeColor = '#00ff87'; // Legitimate (Green)
   const predLower = prediction.toLowerCase();
-  
+
   if (predLower.includes('phishing') || predLower.includes('malware') || predLower.includes('danger')) {
     badgeColor = '#ff0055'; // Phishing (Red)
   } else if (predLower.includes('defac') || predLower.includes('susp')) {
@@ -155,7 +155,7 @@ function updateTabBadge(tabId, score, prediction) {
   } else if (score >= 40) {
     badgeColor = '#ff9f00';
   }
-  
+
   chrome.action.setBadgeBackgroundColor({ tabId: tabId, color: badgeColor });
 }
 
@@ -272,7 +272,7 @@ function normalizeApiResponse(raw, fallbackUrl) {
  */
 function triggerHighRiskNotification(url, riskScore, prediction) {
   const truncatedUrl = url.length > 30 ? url.substring(0, 30) + '...' : url;
-  
+
   chrome.notifications.create('high-risk-alert-' + Date.now(), {
     type: 'basic',
     iconUrl: 'icons/icon128.png',
@@ -295,7 +295,7 @@ function getHostname(urlStr) {
   try {
     const parsed = new URL(urlStr);
     return parsed.hostname;
-  } catch(e) {
+  } catch (e) {
     return urlStr;
   }
 }

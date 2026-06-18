@@ -1,35 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="LinkLens AI Real-time Phishing & Web Threat Detector Extension Popup.">
   <title>LinkLens AI - Phishing URL Detector</title>
-  
+
   <!-- Modern Typography: Space Grotesk for headers and Fira Code for technical details -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
   <!-- Tailwind CSS is avoided per instructions; using custom popup.css -->
   <link rel="stylesheet" href="popup.css">
 </head>
+
 <body>
   <div class="app-container">
-    
+
     <!-- Top Cyber Header -->
     <header class="app-header">
       <div class="logo-area">
         <div class="logo-icon-container">
           <svg class="logo-svg" viewBox="0 0 24 24" width="24" height="24">
-            <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5zm0 18c-3.75-1-6.5-4.83-6.5-8.5V8.55l6.5-3.61 6.5 3.61V11.5c0 3.67-2.75 7.5-6.5 8.5z"/>
-            <path d="M12 7c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
+            <path
+              d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5zm0 18c-3.75-1-6.5-4.83-6.5-8.5V8.55l6.5-3.61 6.5 3.61V11.5c0 3.67-2.75 7.5-6.5 8.5z" />
+            <path
+              d="M12 7c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z" />
           </svg>
           <div class="logo-pulse"></div>
         </div>
         <span class="logo-text">LINK<span class="accent-text">LENS</span> AI</span>
       </div>
-      
+
       <!-- Nav Tabs -->
       <nav class="app-nav">
         <button id="nav-scan-btn" class="nav-tab active" title="Scan Link">SCAN</button>
@@ -40,10 +46,10 @@
 
     <!-- Main Dynamic Content Views -->
     <main class="app-content">
-      
+
       <!-- 1. SCAN DASHBOARD VIEW -->
       <section id="view-scan" class="content-view active">
-        
+
         <!-- Target Site Info Card -->
         <div class="card target-card">
           <div class="card-header">
@@ -54,8 +60,10 @@
             <div id="target-url-text" class="url-text">Detecting browser tab...</div>
             <button id="copy-url-btn" class="btn-icon" title="Copy URL">
               <svg viewBox="0 0 24 24" width="14" height="14">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="2"/>
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" fill="none" stroke="currentColor"
+                  stroke-width="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor"
+                  stroke-width="2" />
               </svg>
             </button>
           </div>
@@ -86,7 +94,8 @@
         <div id="scan-error" class="card error-card hidden">
           <div class="error-icon-wrapper">
             <svg viewBox="0 0 24 24" width="36" height="36" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+              <path
+                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
             </svg>
           </div>
           <h3 id="error-title">CONNECTION FAIL</h3>
@@ -96,24 +105,25 @@
 
         <!-- Scan Result Content -->
         <div id="scan-results" class="results-container hidden">
-          
+
           <!-- Threat Warning Banner (Danger Flash Card) -->
           <div id="danger-warning-banner" class="danger-warning-card hidden">
             <div class="warning-header">
               <svg class="warning-icon" viewBox="0 0 24 24" width="20" height="20">
-                <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" fill="currentColor"/>
+                <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" fill="currentColor" />
               </svg>
               <span>HIGH-RISK DETECTED</span>
             </div>
             <div class="warning-body">
-              <strong>⚠ Warning:</strong> This website is classified as malicious. Proceeding may compromise your credentials, hardware, or personal information.
+              <strong>⚠ Warning:</strong> This website is classified as malicious. Proceeding may compromise your
+              credentials, hardware, or personal information.
             </div>
           </div>
 
           <!-- Dynamic Threat Verdict Panel -->
           <div class="card verdict-card">
             <div class="card-grid">
-              
+
               <!-- Verdict Block -->
               <div class="grid-item full-width-sm">
                 <span class="technical-label">CLASSIFICATION</span>
@@ -127,8 +137,10 @@
                 <div class="meter-wrapper">
                   <div class="meter-circle-container">
                     <svg class="meter-svg" viewBox="0 0 36 36">
-                      <path class="meter-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                      <path id="meter-fill" class="meter-progress" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                      <path class="meter-bg"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                      <path id="meter-fill" class="meter-progress" stroke-dasharray="0, 100"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                     </svg>
                     <div id="result-risk-value" class="meter-text">0%</div>
                   </div>
@@ -163,7 +175,7 @@
               <!-- Dynamically populated -->
             </ul>
           </div>
-          
+
         </div>
 
       </section>
@@ -174,10 +186,12 @@
           <h2 class="view-title">AUDIT LOGGER</h2>
           <button id="clear-history-btn" class="btn btn-outline btn-xs" title="Reset audit logs">CLEAR ALL</button>
         </div>
-        
+
         <div id="history-empty" class="history-empty">
           <svg viewBox="0 0 24 24" width="48" height="48" class="empty-icon">
-            <path d="M19 8l-4 4h3c0 3.31-2.69 6-6 6-1.01 0-1.97-.25-2.8-.7l-1.46 1.46C8.97 19.54 10.43 20 12 20c4.42 0 8-3.58 8-8h3l-4-4zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46C15.03 4.46 13.57 4 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4H6z" fill="currentColor"/>
+            <path
+              d="M19 8l-4 4h3c0 3.31-2.69 6-6 6-1.01 0-1.97-.25-2.8-.7l-1.46 1.46C8.97 19.54 10.43 20 12 20c4.42 0 8-3.58 8-8h3l-4-4zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46C15.03 4.46 13.57 4 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4H6z"
+              fill="currentColor" />
           </svg>
           <p>No link analyses logged in this session.</p>
         </div>
@@ -191,13 +205,15 @@
       <!-- 3. SETTINGS VIEW -->
       <section id="view-settings" class="content-view">
         <h2 class="view-title">SCANNER CONFIGURATION</h2>
-        
+
         <!-- Endpoint config form -->
         <div class="card form-card">
           <div class="form-group">
             <label for="settings-api-url" class="technical-label">BACKEND API GATEWAY</label>
-            <input type="url" id="settings-api-url" class="form-input" placeholder="http://127.0.0.1:8000/api/analyze" required>
-            <span class="input-help">Endpoint configuration for HTTP request routing. Default local FastAPI endpoint is <code>http://localhost:8000/api/analyze</code></span>
+            <input type="url" id="settings-api-url" class="form-input" placeholder="http://127.0.0.1:8000/api/analyze"
+              required>
+            <span class="input-help">Endpoint configuration for HTTP request routing. Default local FastAPI endpoint is
+              <code>https://linklens-ai-ssu5.onrender.com</code></span>
           </div>
 
           <div class="form-group">
@@ -257,25 +273,29 @@
         <span class="technical-label">PRIVACY POLICY</span>
         <button id="close-privacy-btn" class="btn-icon" title="Close">
           <svg viewBox="0 0 24 24" width="14" height="14">
-            <line x1="18" y1="6" x2="6" y2="18" fill="none" stroke="currentColor" stroke-width="2"/>
-            <line x1="6" y1="6" x2="18" y2="18" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="18" y1="6" x2="6" y2="18" fill="none" stroke="currentColor" stroke-width="2" />
+            <line x1="6" y1="6" x2="18" y2="18" fill="none" stroke="currentColor" stroke-width="2" />
           </svg>
         </button>
       </header>
       <div class="modal-body">
         <h2>Privacy Policy for LinkLens AI</h2>
         <p class="modal-date"><strong>Last Updated:</strong> June 2026</p>
-        
+
         <h3>1. Introduction</h3>
-        <p>LinkLens AI is an AI-powered phishing URL detection and website security analysis platform available as both a web application and browser extension. The platform is designed to help users identify potentially malicious, phishing, and suspicious websites through machine learning and domain intelligence analysis.</p>
-        <p>This Privacy Policy explains how LinkLens AI collects, processes, stores, and protects information when users interact with the web application or browser extension.</p>
-        
+        <p>LinkLens AI is an AI-powered phishing URL detection and website security analysis platform available as both
+          a web application and browser extension. The platform is designed to help users identify potentially
+          malicious, phishing, and suspicious websites through machine learning and domain intelligence analysis.</p>
+        <p>This Privacy Policy explains how LinkLens AI collects, processes, stores, and protects information when users
+          interact with the web application or browser extension.</p>
+
         <h3>2. Information We Collect</h3>
         <p>LinkLens AI only processes information necessary to perform website security analysis.</p>
         <p>The platform may process:</p>
         <ul style="margin: 6px 0 10px 18px; padding-left: 0;">
           <li style="margin-bottom: 4px;">URLs submitted by users for scanning</li>
-          <li style="margin-bottom: 4px;">URLs of currently visited websites (only when browser extension scanning is enabled)</li>
+          <li style="margin-bottom: 4px;">URLs of currently visited websites (only when browser extension scanning is
+            enabled)</li>
           <li style="margin-bottom: 4px;">Scan timestamps</li>
           <li style="margin-bottom: 4px;">Threat classification results</li>
           <li style="margin-bottom: 4px;">Risk scores</li>
@@ -289,7 +309,7 @@
           <li style="margin-bottom: 4px;">Personal documents or user credentials</li>
           <li style="margin-bottom: 4px;">Sensitive personal information</li>
         </ul>
-        
+
         <h3>3. Purpose of Data Processing</h3>
         <p>Information is processed solely for:</p>
         <ul style="margin: 6px 0 10px 18px; padding-left: 0;">
@@ -301,7 +321,7 @@
           <li style="margin-bottom: 4px;">Improving system performance and detection accuracy</li>
           <li style="margin-bottom: 4px;">Maintaining scan history functionality</li>
         </ul>
-        
+
         <h3>4. Browser Extension Permissions</h3>
         <p>The LinkLens AI browser extension may request permissions to:</p>
         <ul style="margin: 6px 0 10px 18px; padding-left: 0;">
@@ -312,40 +332,53 @@
           <li style="margin-bottom: 4px;">Communicate with the LinkLens AI backend service</li>
         </ul>
         <p>These permissions are used exclusively for website security analysis and threat detection.</p>
-        
+
         <h3>5. Data Storage</h3>
-        <p>Scan history may be stored locally in the browser or application database to provide users with historical scan information.</p>
-        <p>Stored data may include: URL, scan result, risk score, and scan timestamp. No sensitive personal information is stored.</p>
-        
+        <p>Scan history may be stored locally in the browser or application database to provide users with historical
+          scan information.</p>
+        <p>Stored data may include: URL, scan result, risk score, and scan timestamp. No sensitive personal information
+          is stored.</p>
+
         <h3>6. Third-Party Services</h3>
-        <p>LinkLens AI may utilize third-party services including WHOIS lookup providers, domain intelligence services, cloud hosting, and database services solely to support cybersecurity analysis functionality.</p>
-        
+        <p>LinkLens AI may utilize third-party services including WHOIS lookup providers, domain intelligence services,
+          cloud hosting, and database services solely to support cybersecurity analysis functionality.</p>
+
         <h3>7. Data Sharing</h3>
-        <p>LinkLens AI does not sell, rent, trade, or share user information with advertisers, marketers, or unrelated third parties.</p>
-        
+        <p>LinkLens AI does not sell, rent, trade, or share user information with advertisers, marketers, or unrelated
+          third parties.</p>
+
         <h3>8. Security Measures</h3>
-        <p>Reasonable technical and organizational safeguards are implemented to protect processed information from unauthorized access, data alteration, disclosure, or destruction. While reasonable security measures are maintained, no online system can guarantee absolute security.</p>
-        
+        <p>Reasonable technical and organizational safeguards are implemented to protect processed information from
+          unauthorized access, data alteration, disclosure, or destruction. While reasonable security measures are
+          maintained, no online system can guarantee absolute security.</p>
+
         <h3>9. User Rights</h3>
-        <p>Users may clear locally stored scan history, disable automatic scanning, remove the browser extension at any time, stop using the web application, or request deletion of locally stored data.</p>
-        
+        <p>Users may clear locally stored scan history, disable automatic scanning, remove the browser extension at any
+          time, stop using the web application, or request deletion of locally stored data.</p>
+
         <h3>10. Children's Privacy</h3>
-        <p>LinkLens AI is not intended for use by children under the age of 13. The platform does not knowingly collect information from children.</p>
-        
+        <p>LinkLens AI is not intended for use by children under the age of 13. The platform does not knowingly collect
+          information from children.</p>
+
         <h3>11. Disclaimer</h3>
-        <p>LinkLens AI provides risk assessments based on machine learning models, domain intelligence, and automated analysis techniques. Predictions are informational in nature and should not be considered absolute guarantees regarding website safety. Users should exercise their own judgment when visiting websites.</p>
-        
+        <p>LinkLens AI provides risk assessments based on machine learning models, domain intelligence, and automated
+          analysis techniques. Predictions are informational in nature and should not be considered absolute guarantees
+          regarding website safety. Users should exercise their own judgment when visiting websites.</p>
+
         <h3>12. Changes to This Policy</h3>
-        <p>This Privacy Policy may be updated periodically. Any modifications will be reflected on this page along with an updated revision date.</p>
-        
+        <p>This Privacy Policy may be updated periodically. Any modifications will be reflected on this page along with
+          an updated revision date.</p>
+
         <h3>13. Contact</h3>
         <p><strong>Project Name:</strong> LinkLens AI</p>
         <p><strong>Project Type:</strong> AI-Based Phishing URL Detection and Browser Security Platform</p>
-        <p>For questions regarding this Privacy Policy, users may contact the project administrator through the official project repository, project website, or project support page.</p>
+        <p>For questions regarding this Privacy Policy, users may contact the project administrator through the official
+          project repository, project website, or project support page.</p>
       </div>
     </div>
   </div>
   <!-- Load popup controller script -->
   <script src="popup.js"></script>
 </body>
+
 </html>

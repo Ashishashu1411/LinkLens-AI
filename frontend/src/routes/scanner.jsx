@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { 
-  Shield, Search, Loader2, CheckCircle2, XCircle, AlertTriangle, 
+import {
+  Shield, Search, Loader2, CheckCircle2, XCircle, AlertTriangle,
   Calendar, Clock, Globe, Key, ShieldAlert, ShieldCheck, HelpCircle, Link2,
   Binary
 } from 'lucide-react';
@@ -77,8 +77,8 @@ export default function Scanner() {
     mutationFn: async (urlToScan) => {
       const trimmed = urlToScan.trim();
       if (!trimmed) throw new Error('URL cannot be empty');
-      
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://linklens-ai-ssu5.onrender.com'
       const response = await fetch(`${apiUrl}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -94,7 +94,7 @@ export default function Scanner() {
     onSuccess: (data) => {
       // Save scan to history in local storage
       const scans = JSON.parse(localStorage.getItem('linklens_scans') || '[]');
-      
+
       // Determine ML confidence
       const predictedClass = data.predicted_class ?? 0;
       const confidence = data.ml_probabilities && data.ml_probabilities[predictedClass] !== undefined
@@ -416,7 +416,7 @@ export default function Scanner() {
       {/* Results Rendering */}
       {result && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-500">
-          
+
           {/* Section 1: Verdict Card */}
           <div className="glass p-6 md:p-8 flex flex-col md:flex-row items-center gap-8 border border-[var(--color-border)]">
             <RiskGauge score={result.risk_score} />
@@ -460,8 +460,8 @@ export default function Scanner() {
                 <div>
                   <p className="text-2xs font-mono uppercase tracking-wider text-muted-foreground">Domain Age</p>
                   <p className="text-lg font-bold text-gradient">
-                    {result.live_metrics.domain_age_days >= 0 
-                      ? `${result.live_metrics.domain_age_days}d` 
+                    {result.live_metrics.domain_age_days >= 0
+                      ? `${result.live_metrics.domain_age_days}d`
                       : 'N/A'}
                   </p>
                 </div>
@@ -477,7 +477,7 @@ export default function Scanner() {
                 <AlertTriangle className="w-5 h-5 text-warning" />
                 Risk Diagnostic Analysis
               </h3>
-              
+
               {result.live_metrics.domain_age_days !== -1 && result.live_metrics.domain_age_days < 30 && (
                 <div className="mb-4 p-3.5 rounded-lg border border-danger/30 bg-danger/10 text-danger flex items-start gap-2.5">
                   <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
@@ -508,7 +508,7 @@ export default function Scanner() {
                 <ShieldCheck className="w-5 h-5 text-primary" />
                 Security Indicators
               </h3>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
                   {
@@ -564,7 +564,7 @@ export default function Scanner() {
               <Globe className="w-5 h-5 text-primary" />
               WHOIS Domain Intelligence
             </h3>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {[
                 { label: 'Domain Hostname', val: result.url ? new URL(result.url.startsWith('http') ? result.url : `http://${result.url}`).hostname : 'Unknown', icon: Globe },
@@ -608,19 +608,17 @@ export default function Scanner() {
               {metrics.map((m) => {
                 const isDetected = m.data?.detected;
                 return (
-                  <div key={m.id} className={`p-4 rounded-xl border transition-all flex flex-col justify-between ${
-                    isDetected 
-                      ? 'border-danger/30 bg-danger/5 hover:bg-danger/10 shadow-sm shadow-danger/10' 
-                      : 'border-[var(--color-border)] bg-secondary/10 hover:bg-secondary/20'
-                  }`}>
+                  <div key={m.id} className={`p-4 rounded-xl border transition-all flex flex-col justify-between ${isDetected
+                    ? 'border-danger/30 bg-danger/5 hover:bg-danger/10 shadow-sm shadow-danger/10'
+                    : 'border-[var(--color-border)] bg-secondary/10 hover:bg-secondary/20'
+                    }`}>
                     <div>
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <span className="text-xs font-bold text-foreground leading-snug">{m.name}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-3xs font-mono font-bold tracking-wider uppercase shrink-0 ${
-                          isDetected 
-                            ? 'bg-danger/15 text-danger border border-danger/25' 
-                            : 'bg-success/15 text-success border border-success/25'
-                        }`}>
+                        <span className={`px-2 py-0.5 rounded-full text-3xs font-mono font-bold tracking-wider uppercase shrink-0 ${isDetected
+                          ? 'bg-danger/15 text-danger border border-danger/25'
+                          : 'bg-success/15 text-success border border-success/25'
+                          }`}>
                           {isDetected ? 'Detected' : 'None'}
                         </span>
                       </div>
@@ -647,11 +645,10 @@ export default function Scanner() {
                           <span className="text-2xs font-mono text-muted-foreground">Active Payload Block</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded-full text-3xs font-mono font-bold tracking-wider uppercase flex items-center gap-1 ${
-                            enc.verdict === 'SUSPICIOUS' 
-                              ? 'bg-danger/10 text-danger border border-danger/20' 
-                              : 'bg-success/10 text-success border border-success/20'
-                          }`}>
+                          <span className={`px-2 py-0.5 rounded-full text-3xs font-mono font-bold tracking-wider uppercase flex items-center gap-1 ${enc.verdict === 'SUSPICIOUS'
+                            ? 'bg-danger/10 text-danger border border-danger/20'
+                            : 'bg-success/10 text-success border border-success/20'
+                            }`}>
                             {enc.verdict === 'SUSPICIOUS' ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
                             {enc.verdict} payload
                           </span>
@@ -692,7 +689,7 @@ export default function Scanner() {
               <Link2 className="w-5 h-5 text-accent" />
               Extracted URL Structural Features
             </h3>
-            
+
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 { name: 'URL Length', val: getStructuralProperties(result.url).length },

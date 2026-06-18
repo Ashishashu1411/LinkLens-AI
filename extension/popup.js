@@ -9,22 +9,22 @@ document.addEventListener('DOMContentLoaded', () => {
   const targetUrlText = document.getElementById('target-url-text');
   const activeTabBadge = document.getElementById('active-tab-badge');
   const copyUrlBtn = document.getElementById('copy-url-btn');
-  
+
   const tabScan = document.getElementById('nav-scan-btn');
   const tabHistory = document.getElementById('nav-history-btn');
   const tabSettings = document.getElementById('nav-settings-btn');
-  
+
   const viewScan = document.getElementById('view-scan');
   const viewHistory = document.getElementById('view-history');
   const viewSettings = document.getElementById('view-settings');
-  
+
   const scanWebsiteBtn = document.getElementById('scan-website-btn');
   const retryScanBtn = document.getElementById('retry-scan-btn');
-  
+
   const scanLoading = document.getElementById('scan-loading');
   const scanError = document.getElementById('scan-error');
   const scanResults = document.getElementById('scan-results');
-  
+
   const dangerWarningBanner = document.getElementById('danger-warning-banner');
   const resultVerdict = document.getElementById('result-verdict');
   const resultThreatType = document.getElementById('result-threat-type');
@@ -35,23 +35,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const resultDomainAge = document.getElementById('result-domain-age');
   const reasonsCountBadge = document.getElementById('reasons-count-badge');
   const reasonsList = document.getElementById('reasons-list');
-  
+
   const clearHistoryBtn = document.getElementById('clear-history-btn');
   const historyEmpty = document.getElementById('history-empty');
   const historyListWrapper = document.getElementById('history-list-wrapper');
   const historyItems = document.getElementById('history-items');
-  
+
   const settingsApiUrl = document.getElementById('settings-api-url');
   const saveSettingsBtn = document.getElementById('save-settings-btn');
   const settingsSaveSuccess = document.getElementById('settings-save-success');
-  
+
   const statusIndicator = document.getElementById('footer-status-indicator');
   const statusText = document.getElementById('footer-status-text');
 
   // --- State Variables ---
   let currentUrl = '';
   let activeTabTitle = '';
-  let apiGatewayUrl = 'http://localhost:8000/api/analyze'; // Default FastAPI API
+  let apiGatewayUrl = 'https://linklens-ai-ssu5.onrender.com'; // Default FastAPI API
   const MAX_HISTORY_ITEMS = 50;
 
   // Global UI Logger Helper in case of crash
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
       [tabScan, tabHistory, tabSettings].forEach(t => {
         if (t) t.classList.remove('active');
       });
-      
+
       if (targetView === 'scan' && viewScan && tabScan) {
         viewScan.classList.add('active');
         tabScan.classList.add('active');
@@ -112,17 +112,17 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       setSystemState('online', 'QUERYING TAB...');
-      
+
       // Step A: Try query active tab in current window
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (chrome.runtime.lastError || !tabs || tabs.length === 0) {
           console.warn('[LinkLens JS] currentWindow query failed, trying lastFocusedWindow...');
-          
+
           // Step B: Try query active tab in last focused window (often handles devtools/inspected popups)
           chrome.tabs.query({ active: true, lastFocusedWindow: true }, (fallbackTabs) => {
             if (chrome.runtime.lastError || !fallbackTabs || fallbackTabs.length === 0) {
               console.warn('[LinkLens JS] lastFocusedWindow query failed, querying any active tab...');
-              
+
               // Step C: Query any active tab in the entire browser
               chrome.tabs.query({ active: true }, (allActiveTabs) => {
                 if (chrome.runtime.lastError || !allActiveTabs || allActiveTabs.length === 0) {
@@ -151,12 +151,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       currentUrl = tab.url || '';
       activeTabTitle = tab.title || '';
-      
+
       const isInternal = isInternalBrowserUrl(currentUrl);
       targetUrlText.textContent = currentUrl;
       targetUrlText.title = currentUrl;
       targetUrlText.style.color = ''; // reset color
-      
+
       if (isInternal) {
         if (activeTabBadge) {
           activeTabBadge.textContent = 'SYSTEM PAGE';
@@ -164,14 +164,14 @@ document.addEventListener('DOMContentLoaded', () => {
           activeTabBadge.style.borderColor = 'rgba(255, 255, 255, 0.1)';
           activeTabBadge.style.color = 'var(--text-muted)';
         }
-        
+
         targetUrlText.textContent = 'Internal Browser Page (' + getHost(currentUrl) + ')';
         if (scanWebsiteBtn) {
           scanWebsiteBtn.disabled = true;
           scanWebsiteBtn.style.opacity = '0.5';
           scanWebsiteBtn.title = 'Cannot scan internal system domains.';
         }
-        
+
         if (scanResults) scanResults.classList.add('hidden');
         if (scanLoading) scanLoading.classList.add('hidden');
         if (scanError) scanError.classList.add('hidden');
@@ -183,13 +183,13 @@ document.addEventListener('DOMContentLoaded', () => {
           activeTabBadge.style.borderColor = 'rgba(0, 240, 255, 0.25)';
           activeTabBadge.style.color = 'var(--accent-cyan)';
         }
-        
+
         if (scanWebsiteBtn) {
           scanWebsiteBtn.disabled = false;
           scanWebsiteBtn.style.opacity = '1';
           scanWebsiteBtn.title = '';
         }
-        
+
         checkCachedScan(currentUrl);
       }
     };
@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const parsed = new URL(urlStr);
         return parsed.hostname || urlStr;
-      } catch(e) {
+      } catch (e) {
         return urlStr;
       }
     };
@@ -238,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (res.apiUrl) {
           apiGatewayUrl = res.apiUrl;
         } else {
-          apiGatewayUrl = 'http://localhost:8000/api/analyze';
+          apiGatewayUrl = "https://linklens-ai-ssu5.onrender.com/api/analyze"
         }
         if (callback) callback();
       });
@@ -256,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
           new URL(enteredUrl);
           apiGatewayUrl = enteredUrl;
-          
+
           if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
             chrome.storage.local.set({ apiUrl: enteredUrl }, () => {
               if (settingsSaveSuccess) {
@@ -343,10 +343,10 @@ document.addEventListener('DOMContentLoaded', () => {
         resultVerdict.className = 'verdict-value';
         resultVerdict.textContent = prediction.toUpperCase();
       }
-      
+
       let severityClass = 'legitimate';
       let meterColor = 'var(--color-legitimate)';
-      
+
       const predLower = prediction.toLowerCase();
       if (predLower.includes('phishing') || predLower.includes('malware') || predLower.includes('danger')) {
         severityClass = 'dangerous';
@@ -414,7 +414,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (tabs && tabs[0]) {
             const tabId = tabs[0].id;
             chrome.action.setBadgeText({ tabId: tabId, text: String(riskScore) });
-            
+
             let badgeColor = '#00ff87'; // Legitimate (Green)
             const predLower = prediction.toLowerCase();
             if (predLower.includes('phishing') || predLower.includes('malware') || predLower.includes('danger') || riskScore >= 70) {
@@ -433,14 +433,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 6. Local Storage Cache & Session History ---
     const saveScanToCacheAndHistory = (url, data) => {
       if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
-      
+
       chrome.storage.local.get(['scanCache', 'scanHistory'], (res) => {
         const cache = res.scanCache || {};
         cache[url] = data;
 
         let history = res.scanHistory || [];
         history = history.filter(item => item.url !== url);
-        
+
         history.unshift({
           url: url,
           prediction: data.prediction,
@@ -466,10 +466,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (historyListWrapper) historyListWrapper.classList.add('hidden');
         return;
       }
-      
+
       chrome.storage.local.get(['scanHistory'], (res) => {
         const history = res.scanHistory || [];
-        
+
         if (history.length === 0) {
           if (historyEmpty) historyEmpty.classList.remove('hidden');
           if (historyListWrapper) historyListWrapper.classList.add('hidden');
@@ -484,7 +484,7 @@ document.addEventListener('DOMContentLoaded', () => {
           history.forEach(item => {
             const div = document.createElement('div');
             div.className = 'history-item';
-            
+
             const predLower = item.prediction.toLowerCase();
             let badgeClass = 'legitimate';
             if (predLower.includes('phish') || predLower.includes('malware') || predLower.includes('danger')) {
@@ -518,13 +518,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     targetUrlText.textContent = item.url;
                     targetUrlText.title = item.url;
                   }
-                  
+
                   if (scanWebsiteBtn) {
                     scanWebsiteBtn.disabled = false;
                     scanWebsiteBtn.style.opacity = '1';
                   }
                   if (activeTabBadge) activeTabBadge.textContent = 'HISTORICAL VIEW';
-                  
+
                   switchView('scan');
                   renderScanResults(cache[item.url]);
                 }
