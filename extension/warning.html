@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Alert: Blocked by LinkLens AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="warning.css">
+</head>
+<body>
+  <div class="warning-container">
+    
+    <!-- Top Danger Shield Alert -->
+    <div class="alert-badge-wrapper">
+      <div class="danger-shield-glow"></div>
+      <div class="danger-shield">
+        <svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor">
+          <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5zm-1 6h2v6h-2V8zm0 8h2v2h-2v-2z"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Alert Title -->
+    <header class="warning-header">
+      <h1 class="critical-alert">SECURITY INTERCEPTED</h1>
+      <p class="warning-subtitle">LinkLens AI has blocked access to a suspected high-risk web domain.</p>
+    </header>
+
+    <!-- Telemetry Cards -->
+    <div class="warning-details-card">
+      
+      <div class="details-row">
+        <span class="tech-label">BLOCKED_URL</span>
+        <div id="blocked-url-display" class="tech-value monospace-font select-all">Checking URL...</div>
+      </div>
+
+      <div class="telemetry-grid">
+        <div class="telemetry-box">
+          <span class="tech-label">RISK_VERDICT</span>
+          <div id="blocked-verdict-display" class="threat-status red-glow">SUSPECTED PHISHING</div>
+        </div>
+        <div class="telemetry-box">
+          <span class="tech-label">RISK_RATING</span>
+          <div id="blocked-score-display" class="score-status red-glow">0%</div>
+        </div>
+      </div>
+
+      <div class="reasons-box">
+        <span class="tech-label">HEURISTIC_TELEMETRY_LOGS</span>
+        <ul id="blocked-reasons-list" class="reasons-list monospace-font">
+          <!-- Dynamically populated -->
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Actions Panel -->
+    <div class="actions-panel">
+      <button id="go-back-btn" class="btn btn-primary btn-glow">
+        <span>RETURN TO SAFETY</span>
+      </button>
+      <button id="proceed-btn" class="btn btn-outline-danger">
+        <span>PROCEED ANYWAY (UNSAFE)</span>
+      </button>
+    </div>
+
+    <footer class="warning-footer monospace-font">
+      <span>LINKLENS AI V1.0 • SHIELD GUARD ACTIVE</span>
+    </footer>
+
+  </div>
+
+  <script src="warning.js"></script>
+</body>
+</html>

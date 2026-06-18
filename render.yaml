@@ -1,0 +1,25 @@
+services:
+  # Backend Web Service (FastAPI)
+  - type: web
+    name: linklens-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PORT
+        value: 8000
+    rootDir: backend
+
+  # Frontend Static Site (Vite React)
+  - type: web
+    name: linklens-frontend
+    env: static
+    buildCommand: npm install && npm run build
+    publishDir: dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: linklens-backend
+          type: web
+          property: url
+    rootDir: frontend
