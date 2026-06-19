@@ -525,46 +525,20 @@ def analyze_all_encodings_in_url(url: str) -> list:
 #  2) Real-Time OSINT / Live Feature Extraction (for UI display, NOT for ML)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def extract_advanced_live_features(url: str) -> dict:
-    """
-    Extract real-time OSINT threat indicators for display in the dashboard.
-    These are NOT fed into the ML model — they are used by the hybrid risk
-    score engine and displayed in the OSINT metrics panel.
-    """
-    safe_url = _ensure_scheme(url)
-    parsed = urlparse(safe_url)
-    hostname = (parsed.hostname or "").lower()
+from functools import lru_cache
+import concurrent.futures
 
+@lru_cache(maxsize=1024)
+def fetch_whois(hostname: str) -> dict:
+    """Perform WHOIS lookup in a cached thread."""
     result = {
         "domain_age_days": -1,
         "creation_date": "Unknown",
         "whois_private": False,
-        "has_base64": False,
-        "has_hex": False,
-        "has_double_encoding": False,
-        "entropy": 0.0,
-        "redirect_hops": 0,
-        "final_url": url,
-        "ssl_valid": False,
-        "ssl_issuer_org": "N/A",
-        "is_lets_encrypt": False,
-        "is_corporate_ca": False,
-        "cert_age_days": -1,
-        "registrar": "Unknown",
-        "base64_analysis": {
-            "found": False,
-            "raw_string": "",
-            "decoded_text": "",
-            "verdict": "SAFE",
-            "analysis": "No active Base64 encoding detected."
-        },
-        "encodings_analysis": []
+        "registrar": "Unknown"
     }
-
-    # ── 1. WHOIS Lookup ──────────────────────────────────────────────────────
     try:
         import whois
-
         w = whois.whois(hostname)
         creation = w.creation_date
         if isinstance(creation, list):
@@ -578,6 +552,7 @@ def extract_advanced_live_features(url: str) -> dict:
             age = (now - creation).days
             result["domain_age_days"] = age
             result["creation_date"] = creation.isoformat()
+        
         # Check privacy
         registrant = str(w.get("org", "") or w.get("registrant_name", "") or "")
         if any(
@@ -593,6 +568,147 @@ def extract_advanced_live_features(url: str) -> dict:
         result["registrar"] = str(registrar or "Unknown")
     except Exception:
         result["whois_private"] = True  # assume private on failure
+    return result
+
+
+@lru_cache(maxsize=1024)
+def fetch_redirects(safe_url: str, url: str) -> dict:
+    """Perform HTTP request to trace redirect chain in a cached thread."""
+    result = {
+        "redirect_hops": 0,
+        "final_url": url
+    }
+    try:
+        import requests as req_lib
+        resp = req_lib.get(safe_url, allow_redirects=True, timeout=3,
+                           headers={"User-Agent": "Mozilla/5.0 LinkLens/2.0"})
+        result["redirect_hops"] = len(resp.history)
+        result["final_url"] = resp.url
+    except Exception:
+        pass
+    return result
+
+
+@lru_cache(maxsize=1024)
+def fetch_ssl(hostname: str) -> dict:
+    """Perform SSL certificate socket connection in a cached thread."""
+    result = {
+        "ssl_valid": False,
+        "ssl_issuer_org": "N/A",
+        "is_lets_encrypt": False,
+        "is_corporate_ca": False,
+        "cert_age_days": -1
+    }
+    try:
+        ctx = ssl.create_default_context()
+        with ctx.wrap_socket(socket.socket(socket.AF_INET), server_hostname=hostname) as s:
+            s.settimeout(3)
+            s.connect((hostname, 443))
+            cert = s.getpeercert()
+
+        result["ssl_valid"] = True
+
+        # Issuer organisation
+        issuer_org = "N/A"
+        for field in cert.get("issuer", ()):
+            for key, value in field:
+                if key == "organizationName":
+                    issuer_org = value
+                    break
+        result["ssl_issuer_org"] = issuer_org
+
+        issuer_lower = issuer_org.lower()
+        result["is_lets_encrypt"] = "let's encrypt" in issuer_lower or "lets encrypt" in issuer_lower
+        result["is_corporate_ca"] = any(ca in issuer_lower for ca in CORPORATE_CAS)
+
+        # Certificate age
+        not_before_str = cert.get("notBefore", "")
+        if not_before_str:
+            not_before = datetime.strptime(not_before_str, "%b %d %H:%M:%S %Y %Z")
+            not_before = not_before.replace(tzinfo=timezone.utc)
+            result["cert_age_days"] = (datetime.now(timezone.utc) - not_before).days
+    except Exception:
+        pass
+    return result
+
+
+def extract_advanced_live_features(url: str) -> dict:
+    """
+    Extract real-time OSINT threat indicators for display in the dashboard.
+    These are NOT fed into the ML model — they are used by the hybrid risk
+    score engine and displayed in the OSINT metrics panel.
+    """
+    safe_url = _ensure_scheme(url)
+    parsed = urlparse(safe_url)
+    hostname = (parsed.hostname or "").lower()
+
+    # ── Run network lookups concurrently using ThreadPoolExecutor ──
+    whois_data = {}
+    redirect_data = {}
+    ssl_data = {}
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        future_whois = executor.submit(fetch_whois, hostname)
+        future_redirects = executor.submit(fetch_redirects, safe_url, url)
+        future_ssl = executor.submit(fetch_ssl, hostname)
+        
+        # Wait up to 3.5 seconds total for all concurrent tasks to finish
+        concurrent.futures.wait(
+            [future_whois, future_redirects, future_ssl],
+            timeout=3.5
+        )
+        
+        # Retrieve results for completed tasks, fallback to defaults on timeout/failure
+        if future_whois.done():
+            try:
+                whois_data = future_whois.result().copy()
+            except Exception:
+                whois_data = {}
+        else:
+            whois_data = {"domain_age_days": -1, "creation_date": "Unknown", "whois_private": True, "registrar": "Unknown"}
+
+        if future_redirects.done():
+            try:
+                redirect_data = future_redirects.result().copy()
+            except Exception:
+                redirect_data = {}
+        else:
+            redirect_data = {"redirect_hops": 0, "final_url": url}
+
+        if future_ssl.done():
+            try:
+                ssl_data = future_ssl.result().copy()
+            except Exception:
+                ssl_data = {}
+        else:
+            ssl_data = {"ssl_valid": False, "ssl_issuer_org": "N/A", "is_lets_encrypt": False, "is_corporate_ca": False, "cert_age_days": -1}
+
+    # Assemble main result structure
+    result = {
+        "domain_age_days": whois_data.get("domain_age_days", -1),
+        "creation_date": whois_data.get("creation_date", "Unknown"),
+        "whois_private": whois_data.get("whois_private", True),
+        "has_base64": False,
+        "has_hex": False,
+        "has_double_encoding": False,
+        "entropy": 0.0,
+        "redirect_hops": redirect_data.get("redirect_hops", 0),
+        "final_url": redirect_data.get("final_url", url),
+        "ssl_valid": ssl_data.get("ssl_valid", False),
+        "ssl_issuer_org": ssl_data.get("ssl_issuer_org", "N/A"),
+        "is_lets_encrypt": ssl_data.get("is_lets_encrypt", False),
+        "is_corporate_ca": ssl_data.get("is_corporate_ca", False),
+        "cert_age_days": ssl_data.get("cert_age_days", -1),
+        "registrar": whois_data.get("registrar", "Unknown"),
+        "base64_analysis": {
+            "found": False,
+            "raw_string": "",
+            "decoded_text": "",
+            "verdict": "SAFE",
+            "analysis": "No active Base64 encoding detected."
+        },
+        "encodings_analysis": []
+    }
 
     # ── 2. Encoding Detection ─────────────────────────────────────────────────
     try:
@@ -620,52 +736,6 @@ def extract_advanced_live_features(url: str) -> dict:
         result["entropy"] = _shannon_entropy(hostname)
     except Exception:
         pass
-
-    # ── 4. Redirect Chain Tracker ─────────────────────────────────────────────
-    try:
-        import requests as req_lib
-
-        resp = req_lib.get(safe_url, allow_redirects=True, timeout=8,
-                           headers={"User-Agent": "Mozilla/5.0 LinkLens/2.0"})
-        result["redirect_hops"] = len(resp.history)
-        result["final_url"] = resp.url
-    except Exception:
-        result["redirect_hops"] = 0
-        result["final_url"] = url
-
-    # ── 5. SSL/TLS Certificate Deep Scan ──────────────────────────────────────
-    try:
-        ctx = ssl.create_default_context()
-        with ctx.wrap_socket(socket.socket(socket.AF_INET), server_hostname=hostname) as s:
-            s.settimeout(5)
-            s.connect((hostname, 443))
-            cert = s.getpeercert()
-
-        result["ssl_valid"] = True
-
-        # Issuer organisation
-        issuer_org = "N/A"
-        for field in cert.get("issuer", ()):
-            for key, value in field:
-                if key == "organizationName":
-                    issuer_org = value
-                    break
-        result["ssl_issuer_org"] = issuer_org
-
-        issuer_lower = issuer_org.lower()
-        result["is_lets_encrypt"] = "let's encrypt" in issuer_lower or "lets encrypt" in issuer_lower
-        result["is_corporate_ca"] = any(ca in issuer_lower for ca in CORPORATE_CAS)
-
-        # Certificate age
-        not_before_str = cert.get("notBefore", "")
-        if not_before_str:
-            not_before = datetime.strptime(not_before_str, "%b %d %H:%M:%S %Y %Z")
-            not_before = not_before.replace(tzinfo=timezone.utc)
-            result["cert_age_days"] = (datetime.now(timezone.utc) - not_before).days
-
-    except Exception:
-        result["ssl_valid"] = False
-        result["ssl_issuer_org"] = "N/A"
 
     # ── 6. Advanced Phishing Indicators ───────────────────────────────────────
     try:
