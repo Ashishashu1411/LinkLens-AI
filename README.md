@@ -304,14 +304,14 @@ python train.py
 **Expected output:**
 ```
 [*] Loading dataset...
-    Shape: (235795, 65)
+    Shape: (651191, 64)
     Label distribution:
-    0    134850
-    1     44578
-    2     46218
-    3     10149
+    0    428103
+    1     96457
+    2     94111
+    3     32520
 [*] Training Random Forest Classifier (4-class)...
-[+] Accuracy: 0.97XX
+[+] Accuracy: 0.8820
 [+] Model saved to models/phishing_model.pkl
 [✓] Training complete.
 ```
@@ -750,7 +750,7 @@ const DEFAULT_API_URL = 'http://localhost:5000/scan';
 
 ### Model Performance
 
-The trained model achieves approximately **97%+ accuracy** on the test set with strong precision and recall across all four classes.
+The trained model achieves approximately **88.2% accuracy** on the test set with strong precision and recall across all four classes.
 
 ---
 

@@ -14,8 +14,8 @@ export default function Home() {
   useMeta(head());
 
   const stats = [
-    { value: '99.2%', label: 'Detection Accuracy' },
-    { value: '< 1s', label: 'Scan Latency' },
+    { value: '88.2%', label: 'Detection Accuracy' },
+    { value: '~2.4s', label: 'Scan Latency' },
     { value: '30+', label: 'Deep OSINT Signals' },
     { value: '24/7', label: 'Uptime Monitoring' },
   ];
