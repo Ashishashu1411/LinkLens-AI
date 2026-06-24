@@ -14,8 +14,12 @@ import re
 import math
 import ssl
 import socket
+import sqlite3
+import os
 from urllib.parse import urlparse, parse_qs, urljoin
 from datetime import datetime, timezone
+from functools import lru_cache
+import concurrent.futures
 
 # ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -525,8 +529,250 @@ def analyze_all_encodings_in_url(url: str) -> list:
 #  2) Real-Time OSINT / Live Feature Extraction (for UI display, NOT for ML)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-from functools import lru_cache
-import concurrent.futures
+
+
+# ─── Whitelist of Top Safe Domains ───────────────────────────────────────────
+TOP_SAFE_DOMAINS = {
+    # Search engines & major portals
+    "google.com", "google.co.in", "google.co.uk", "google.ca", "google.de", "google.fr", "google.co.jp",
+    "bing.com", "yahoo.com", "baidu.com", "yandex.ru", "duckduckgo.com",
+    # Social media & communication
+    "facebook.com", "twitter.com", "x.com", "instagram.com", "linkedin.com", "pinterest.com",
+    "reddit.com", "tumblr.com", "whatsapp.com", "telegram.org", "snapchat.com", "tiktok.com",
+    # Media & entertainment
+    "youtube.com", "netflix.com", "spotify.com", "vimeo.com", "twitch.tv", "imdb.com", "disneyplus.com",
+    # Technology & cloud providers
+    "apple.com", "icloud.com", "microsoft.com", "office.com", "outlook.com", "live.com", "skype.com",
+    "amazon.com", "amazon.co.uk", "amazon.in", "aws.amazon.com", "github.com", "githubusercontent.com", "gitlab.com",
+    "cloudflare.com", "vercel.app", "netlify.app", "heroku.com", "digitalocean.com",
+    "dropbox.com", "zoom.us", "salesforce.com", "adobe.com", "oracle.com", "ibm.com",
+    # Knowledge & education
+    "wikipedia.org", "wikimedia.org", "quora.com", "medium.com", "stackoverflow.com",
+    "stackexchange.com", "w3schools.com", "coursera.org", "udemy.com", "khanacademy.org",
+    # News & publications
+    "nytimes.com", "cnn.com", "bbc.co.uk", "bbc.com", "reuters.com", "bloomberg.com", "forbes.com",
+    "theguardian.com", "wsj.com", "washingtonpost.com", "techcrunch.com", "wired.com",
+    # Government & International
+    "nih.gov", "cdc.gov", "nasa.gov", "gov.uk", "india.gov.in", "who.int", "un.org",
+    # Payment & Finance
+    "paypal.com", "stripe.com", "visa.com", "mastercard.com", "chase.com", "wellsfargo.com",
+    "bankofamerica.com", "citi.com",
+}
+
+def is_whitelisted_safe_domain(hostname: str) -> bool:
+    if not hostname:
+        return False
+    hostname = hostname.lower()
+    if hostname in TOP_SAFE_DOMAINS:
+        return True
+    parts = hostname.split('.')
+    for i in range(1, len(parts)):
+        parent = ".".join(parts[i:])
+        if parent in TOP_SAFE_DOMAINS:
+            return True
+    return False
+
+# ─── SQLite Persistent Caching Layer ──────────────────────────────────────────
+DB_PATH = os.path.join(os.path.dirname(__file__), "linklens_cache.db")
+
+def get_db_connection():
+    conn = sqlite3.connect(DB_PATH, timeout=10.0)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS whois_cache (
+                hostname TEXT PRIMARY KEY,
+                domain_age_days INTEGER,
+                creation_date TEXT,
+                whois_private INTEGER,
+                registrar TEXT,
+                cached_at TEXT
+            )
+        """)
+        
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS ssl_cache (
+                hostname TEXT PRIMARY KEY,
+                ssl_valid INTEGER,
+                ssl_issuer_org TEXT,
+                is_lets_encrypt INTEGER,
+                is_corporate_ca INTEGER,
+                cert_age_days INTEGER,
+                cached_at TEXT
+            )
+        """)
+        
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS redirect_cache (
+                url TEXT PRIMARY KEY,
+                redirect_hops INTEGER,
+                final_url TEXT,
+                cached_at TEXT
+            )
+        """)
+        
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"[-] DB init error: {e}")
+
+# Initialize DB on load
+init_db()
+
+def is_expired(cached_at_str: str, max_age_seconds: int) -> bool:
+    try:
+        cached_at = datetime.fromisoformat(cached_at_str)
+        now = datetime.now(timezone.utc)
+        if cached_at.tzinfo is None:
+            cached_at = cached_at.replace(tzinfo=timezone.utc)
+        return (now - cached_at).total_seconds() > max_age_seconds
+    except Exception:
+        return True
+
+def get_whois_from_db(hostname: str) -> dict or None:
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM whois_cache WHERE hostname = ?", (hostname,))
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            if not is_expired(row["cached_at"], 604800): # 7 days
+                return {
+                    "domain_age_days": row["domain_age_days"],
+                    "creation_date": row["creation_date"],
+                    "whois_private": bool(row["whois_private"]),
+                    "registrar": row["registrar"],
+                    "whois_completed": True
+                }
+    except Exception as e:
+        print(f"[-] DB error loading WHOIS: {e}")
+    return None
+
+def save_whois_to_db(hostname: str, data: dict):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT OR REPLACE INTO whois_cache 
+            (hostname, domain_age_days, creation_date, whois_private, registrar, cached_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            hostname,
+            data.get("domain_age_days", -1),
+            data.get("creation_date", "Unknown"),
+            1 if data.get("whois_private", False) else 0,
+            data.get("registrar", "Unknown"),
+            datetime.now(timezone.utc).isoformat()
+        ))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"[-] DB error saving WHOIS: {e}")
+
+def get_ssl_from_db(hostname: str) -> dict or None:
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM ssl_cache WHERE hostname = ?", (hostname,))
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            if not is_expired(row["cached_at"], 86400): # 1 day
+                return {
+                    "ssl_valid": bool(row["ssl_valid"]),
+                    "ssl_issuer_org": row["ssl_issuer_org"],
+                    "is_lets_encrypt": bool(row["is_lets_encrypt"]),
+                    "is_corporate_ca": bool(row["is_corporate_ca"]),
+                    "cert_age_days": row["cert_age_days"],
+                    "ssl_completed": True
+                }
+    except Exception as e:
+        print(f"[-] DB error loading SSL: {e}")
+    return None
+
+def save_ssl_to_db(hostname: str, data: dict):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT OR REPLACE INTO ssl_cache 
+            (hostname, ssl_valid, ssl_issuer_org, is_lets_encrypt, is_corporate_ca, cert_age_days, cached_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            hostname,
+            1 if data.get("ssl_valid", False) else 0,
+            data.get("ssl_issuer_org", "N/A"),
+            1 if data.get("is_lets_encrypt", False) else 0,
+            1 if data.get("is_corporate_ca", False) else 0,
+            data.get("cert_age_days", -1),
+            datetime.now(timezone.utc).isoformat()
+        ))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"[-] DB error saving SSL: {e}")
+
+def get_redirect_from_db(url: str) -> dict or None:
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM redirect_cache WHERE url = ?", (url,))
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            if not is_expired(row["cached_at"], 86400): # 1 day
+                return {
+                    "redirect_hops": row["redirect_hops"],
+                    "final_url": row["final_url"],
+                    "redirect_completed": True
+                }
+    except Exception as e:
+        print(f"[-] DB error loading Redirects: {e}")
+    return None
+
+def save_redirect_to_db(url: str, data: dict):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT OR REPLACE INTO redirect_cache 
+            (url, redirect_hops, final_url, cached_at)
+            VALUES (?, ?, ?, ?)
+        """, (
+            url,
+            data.get("redirect_hops", 0),
+            data.get("final_url", url),
+            datetime.now(timezone.utc).isoformat()
+        ))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"[-] DB error saving Redirects: {e}")
+
+def fetch_whois_wrapper(hostname: str) -> dict:
+    res = fetch_whois(hostname)
+    save_whois_to_db(hostname, res)
+    return res
+
+def fetch_ssl_wrapper(hostname: str) -> dict:
+    res = fetch_ssl(hostname)
+    save_ssl_to_db(hostname, res)
+    return res
+
+def fetch_redirects_wrapper(safe_url: str, url: str) -> dict:
+    res = fetch_redirects(safe_url, url)
+    save_redirect_to_db(url, res)
+    return res
 
 @lru_cache(maxsize=1024)
 def fetch_whois(hostname: str) -> dict:
@@ -631,6 +877,8 @@ def fetch_ssl(hostname: str) -> dict:
         pass
     return result
 
+# Global ThreadPoolExecutor for background/concurrent queries
+_executor = concurrent.futures.ThreadPoolExecutor(max_workers=20)
 
 def extract_advanced_live_features(url: str) -> dict:
     """
@@ -642,59 +890,134 @@ def extract_advanced_live_features(url: str) -> dict:
     parsed = urlparse(safe_url)
     hostname = (parsed.hostname or "").lower()
 
-    # ── Run network lookups concurrently using ThreadPoolExecutor ──
-    whois_data = {}
-    redirect_data = {}
-    ssl_data = {}
+    # ── 1. Check Whitelist ──
+    if is_whitelisted_safe_domain(hostname):
+        return {
+            "domain_age_days": 3650, # 10 years
+            "creation_date": "2016-01-01T00:00:00Z",
+            "whois_private": False,
+            "whois_completed": True,
+            "has_base64": False,
+            "has_hex": False,
+            "has_double_encoding": False,
+            "entropy": 2.0,
+            "redirect_hops": 0,
+            "redirect_completed": True,
+            "final_url": url,
+            "ssl_valid": True,
+            "ssl_completed": True,
+            "ssl_issuer_org": "DigiCert Inc",
+            "is_lets_encrypt": False,
+            "is_corporate_ca": True,
+            "cert_age_days": 100,
+            "registrar": "MarkMonitor Inc.",
+            "base64_analysis": {
+                "found": False,
+                "raw_string": "",
+                "decoded_text": "",
+                "verdict": "SAFE",
+                "analysis": "No active Base64 encoding detected."
+            },
+            "encodings_analysis": [],
+            "advanced_analysis": {
+                "basic_auth": {"detected": False},
+                "open_redirect": {"detected": False},
+                "ip_obfuscation": {"detected": False},
+                "idn_homograph": {"detected": False},
+                "typosquatting": {"detected": False},
+                "hidden_chars": {"detected": False}
+            },
+            "evasion_features": {
+                "base64_target_param": {"detected": False, "match": "", "decoded": "", "details": ""},
+                "url_encoding_density": {"detected": False, "percent_count": 0, "density_ratio": 0.0},
+                "double_url_encoding": {"detected": False, "match": ""},
+                "hex_obfuscated_path": {"detected": False, "match": "", "decoded": ""},
+                "mixed_obfuscation": {"detected": False, "types_found": []},
+                "high_parameter_entropy": {"detected": False, "entropy": 0.0, "query_string": ""},
+                "dword_hex_ip": {"detected": False, "original": "", "canonical": ""},
+                "embedded_data_uri": {"detected": False, "match": ""},
+                "punycode_idn_homograph": {"detected": False, "unicode_domain": "", "is_punycode": False},
+                "excessive_padding": {"detected": False, "char": "", "max_reps": 0},
+                "octal_ip_evasion": {"detected": False, "original": "", "canonical": ""},
+                "non_standard_port": {"detected": False, "port": -1}
+            }
+        }
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-        future_whois = executor.submit(fetch_whois, hostname)
-        future_redirects = executor.submit(fetch_redirects, safe_url, url)
-        future_ssl = executor.submit(fetch_ssl, hostname)
+    # ── 2. Check SQLite Persistent Cache ──
+    whois_data = get_whois_from_db(hostname)
+    ssl_data = get_ssl_from_db(hostname)
+    redirect_data = get_redirect_from_db(url)
+
+    # ── 3. Run missing network lookups concurrently using ThreadPoolExecutor ──
+    futures = {}
+    if whois_data is None:
+        futures["whois"] = _executor.submit(fetch_whois_wrapper, hostname)
+    if ssl_data is None:
+        futures["ssl"] = _executor.submit(fetch_ssl_wrapper, hostname)
+    if redirect_data is None:
+        futures["redirect"] = _executor.submit(fetch_redirects_wrapper, safe_url, url)
         
-        # Wait up to 3.5 seconds total for all concurrent tasks to finish
-        concurrent.futures.wait(
-            [future_whois, future_redirects, future_ssl],
-            timeout=3.5
-        )
+    if futures:
+        # Wait up to 1.0 second total for concurrent tasks to finish
+        concurrent.futures.wait(list(futures.values()), timeout=1.0)
         
         # Retrieve results for completed tasks, fallback to defaults on timeout/failure
-        if future_whois.done():
-            try:
-                whois_data = future_whois.result().copy()
-            except Exception:
-                whois_data = {}
-        else:
-            whois_data = {"domain_age_days": -1, "creation_date": "Unknown", "whois_private": True, "registrar": "Unknown"}
+        if "whois" in futures:
+            fut = futures["whois"]
+            if fut.done():
+                try:
+                    whois_data = fut.result().copy()
+                    whois_data["whois_completed"] = True
+                except Exception:
+                    whois_data = {"domain_age_days": -1, "creation_date": "Unknown", "whois_private": False, "registrar": "Unknown", "whois_completed": False}
+            else:
+                whois_data = {"domain_age_days": -1, "creation_date": "Unknown", "whois_private": False, "registrar": "Unknown", "whois_completed": False}
+        
+        if "ssl" in futures:
+            fut = futures["ssl"]
+            if fut.done():
+                try:
+                    ssl_data = fut.result().copy()
+                    ssl_data["ssl_completed"] = True
+                except Exception:
+                    ssl_data = {"ssl_valid": True, "ssl_issuer_org": "N/A", "is_lets_encrypt": False, "is_corporate_ca": False, "cert_age_days": -1, "ssl_completed": False}
+            else:
+                ssl_data = {"ssl_valid": True, "ssl_issuer_org": "N/A", "is_lets_encrypt": False, "is_corporate_ca": False, "cert_age_days": -1, "ssl_completed": False}
+        
+        if "redirect" in futures:
+            fut = futures["redirect"]
+            if fut.done():
+                try:
+                    redirect_data = fut.result().copy()
+                    redirect_data["redirect_completed"] = True
+                except Exception:
+                    redirect_data = {"redirect_hops": 0, "final_url": url, "redirect_completed": False}
+            else:
+                redirect_data = {"redirect_hops": 0, "final_url": url, "redirect_completed": False}
 
-        if future_redirects.done():
-            try:
-                redirect_data = future_redirects.result().copy()
-            except Exception:
-                redirect_data = {}
-        else:
-            redirect_data = {"redirect_hops": 0, "final_url": url}
-
-        if future_ssl.done():
-            try:
-                ssl_data = future_ssl.result().copy()
-            except Exception:
-                ssl_data = {}
-        else:
-            ssl_data = {"ssl_valid": False, "ssl_issuer_org": "N/A", "is_lets_encrypt": False, "is_corporate_ca": False, "cert_age_days": -1}
+    # Ensure fallback values if database had no entries and thread pool did not populate them
+    if whois_data is None:
+        whois_data = {"domain_age_days": -1, "creation_date": "Unknown", "whois_private": False, "registrar": "Unknown", "whois_completed": False}
+    if ssl_data is None:
+        ssl_data = {"ssl_valid": True, "ssl_issuer_org": "N/A", "is_lets_encrypt": False, "is_corporate_ca": False, "cert_age_days": -1, "ssl_completed": False}
+    if redirect_data is None:
+        redirect_data = {"redirect_hops": 0, "final_url": url, "redirect_completed": False}
 
     # Assemble main result structure
     result = {
         "domain_age_days": whois_data.get("domain_age_days", -1),
         "creation_date": whois_data.get("creation_date", "Unknown"),
-        "whois_private": whois_data.get("whois_private", True),
+        "whois_private": whois_data.get("whois_private", False),
+        "whois_completed": whois_data.get("whois_completed", False),
         "has_base64": False,
         "has_hex": False,
         "has_double_encoding": False,
         "entropy": 0.0,
         "redirect_hops": redirect_data.get("redirect_hops", 0),
+        "redirect_completed": redirect_data.get("redirect_completed", False),
         "final_url": redirect_data.get("final_url", url),
-        "ssl_valid": ssl_data.get("ssl_valid", False),
+        "ssl_valid": ssl_data.get("ssl_valid", True),
+        "ssl_completed": ssl_data.get("ssl_completed", False),
         "ssl_issuer_org": ssl_data.get("ssl_issuer_org", "N/A"),
         "is_lets_encrypt": ssl_data.get("is_lets_encrypt", False),
         "is_corporate_ca": ssl_data.get("is_corporate_ca", False),

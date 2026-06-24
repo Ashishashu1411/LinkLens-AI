@@ -181,11 +181,13 @@ def analyze_url(payload: URLRequest):
 
     # Standard Domain age / WHOIS privacy
     if live.get("domain_age_days", -1) != -1 and live["domain_age_days"] < 90:
-        risk_score += 10
-        reasons.append(f"Domain is only {live['domain_age_days']} days old (< 90 days — suspicious)")
+        if live.get("whois_completed", False):
+            risk_score += 10
+            reasons.append(f"Domain is only {live['domain_age_days']} days old (< 90 days — suspicious)")
     elif live.get("whois_private", False) and not ml_confident_benign:
-        risk_score += 10
-        reasons.append("WHOIS information is private/hidden — ownership cannot be verified")
+        if live.get("whois_completed", False):
+            risk_score += 10
+            reasons.append("WHOIS information is private/hidden — ownership cannot be verified")
 
     # ── Evasion / Obfuscation Scoring (12 Advanced Features) ──
     evasion = live.get("evasion_features", {})
@@ -250,19 +252,23 @@ def analyze_url(payload: URLRequest):
     if evasion.get("non_standard_port", {}).get("detected"):
         risk_score += 15
         reasons.append(f"Non-standard web port execution on port: {evasion['non_standard_port']['port']}")
-
+ 
     # Redirect hops
     if live.get("redirect_hops", 0) > 2:
-        risk_score += 8
-        reasons.append(f"Excessive redirect chain detected ({live['redirect_hops']} hops)")
-
+        if live.get("redirect_completed", False):
+            risk_score += 8
+            reasons.append(f"Excessive redirect chain detected ({live['redirect_hops']} hops)")
+ 
     # SSL / Let's Encrypt + young cert
+    is_http_only = url.lower().startswith("http://")
     if not live.get("ssl_valid", False) and not ml_confident_benign:
-        risk_score += 12
-        reasons.append("No valid SSL/TLS certificate — connection is not encrypted")
+        if is_http_only or live.get("ssl_completed", False):
+            risk_score += 12
+            reasons.append("No valid SSL/TLS certificate — connection is not encrypted")
     elif live.get("is_lets_encrypt", False) and live.get("cert_age_days", 999) < 15:
-        risk_score += 8
-        reasons.append(f"SSL issued by Let's Encrypt with very new certificate ({live['cert_age_days']} days old)")
+        if live.get("ssl_completed", False):
+            risk_score += 8
+            reasons.append(f"SSL issued by Let's Encrypt with very new certificate ({live['cert_age_days']} days old)")
 
     # Entropy
     if live.get("entropy", 0) > 4.0:
