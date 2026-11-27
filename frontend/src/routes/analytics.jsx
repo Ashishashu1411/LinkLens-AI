@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   ResponsiveContainer, PieChart, Pie, Cell, 
   BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid
 } from 'recharts';
 import { 
   BarChart3, Activity, ShieldCheck, ShieldAlert, AlertTriangle, 
-  Percent, ArrowRight, Library
+  Percent, ArrowRight
 } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import { useMeta } from '../hooks/useMeta';
@@ -204,7 +204,7 @@ export default function Analytics() {
         <div className="glass p-6 border border-[var(--color-border)] lg:col-span-2 flex flex-col">
           <h3 className="text-sm font-mono uppercase tracking-wider text-foreground mb-4">Threat Distribution</h3>
           <div className="flex-1 min-h-[200px] flex items-center justify-center relative">
-            <ResponsiveContainer width="100%" height={210}>
+            <ResponsiveContainer width="100%" height={210} initialDimension={{ width: 400, height: 210 }}>
               <PieChart>
                 <Pie
                   data={pieData}
@@ -239,7 +239,7 @@ export default function Analytics() {
         <div className="glass p-6 border border-[var(--color-border)] lg:col-span-3 flex flex-col">
           <h3 className="text-sm font-mono uppercase tracking-wider text-foreground mb-4">Risk Score Distribution</h3>
           <div className="flex-1 min-h-[240px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 500, height: 240 }}>
               <BarChart data={barData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" vertical={false} />
                 <XAxis 
@@ -273,7 +273,7 @@ export default function Analytics() {
       <div className="glass p-6 border border-[var(--color-border)] w-full flex flex-col">
         <h3 className="text-sm font-mono uppercase tracking-wider text-foreground mb-4">Daily Scan Volume (Last 14 Days)</h3>
         <div className="h-[220px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 600, height: 220 }}>
             <LineChart data={trendData} margin={{ top: 10, right: 15, left: -25, bottom: 0 }}>
               <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" vertical={false} />
               <XAxis 

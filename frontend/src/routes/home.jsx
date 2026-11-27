@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from '@tanstack/react-router';
 import { Search, BarChart3, Brain, Globe, AlertTriangle, Lock, Zap, ArrowRight } from 'lucide-react';
 import { useMeta } from '../hooks/useMeta';

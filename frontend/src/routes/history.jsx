@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Search, Filter, Trash2, Shield, AlertTriangle, ShieldAlert, Loader2, ArrowRight } from 'lucide-react';
+import { Search, Filter, Trash2, Loader2, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { useMeta } from '../hooks/useMeta';
 

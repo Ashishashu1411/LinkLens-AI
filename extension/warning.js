@@ -31,6 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const params = getQueryParams();
   const blockedUrl = params.url || 'https://unknown-domain.com';
   const riskScore = parseInt(params.score || '0', 10);
+  const riskVerdict = (params.verdict || '').toLowerCase();
+  const isDangerous = riskScore >= 80 ||
+    ['dangerous', 'phishing', 'malware'].some(verdict => riskVerdict.includes(verdict));
   let reasons = [];
 
   try {
@@ -51,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (verdictDisplay) {
-    if (riskScore >= 80) {
+    if (isDangerous) {
       verdictDisplay.textContent = 'HIGH-RISK MALICIOUS SITE';
       verdictDisplay.style.color = 'var(--accent-red)';
     } else if (riskScore >= 40) {

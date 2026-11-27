@@ -5,7 +5,17 @@
  */
 
 // Global API default fallback
-const DEFAULT_API_URL = 'https://linklens-ai-ssu5.onrender.com';
+const DEFAULT_API_URL = 'https://linklens-ai-ssu5.onrender.com/api/analyze';
+
+function isValidApiEndpoint(apiUrl) {
+  try {
+    const endpoint = new URL(apiUrl);
+    return ['http:', 'https:'].includes(endpoint.protocol) &&
+      endpoint.pathname.replace(/\/+$/, '').endsWith('/api/analyze');
+  } catch {
+    return false;
+  }
+}
 
 // Listen for messages from the popup panel (e.g. manual scan triggers)
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -62,10 +72,7 @@ async function handleUrlChange(tabId, url) {
       const allowedUrls = res.allowedUrls || [];
       const cache = res.scanCache || {};
       let apiGatewayUrl = res.apiUrl;
-      const isUrlValid = apiGatewayUrl && 
-                         !apiGatewayUrl.includes('localhost') && 
-                         !apiGatewayUrl.includes('127.0.0.1') && 
-                         apiGatewayUrl.endsWith('/api/analyze');
+      const isUrlValid = isValidApiEndpoint(apiGatewayUrl);
       if (!isUrlValid) {
         apiGatewayUrl = DEFAULT_API_URL;
       }
@@ -78,7 +85,7 @@ async function handleUrlChange(tabId, url) {
         const cachedData = cache[url];
         updateTabBadge(tabId, cachedData.risk_score, cachedData.prediction);
 
-        if (!isWhitelisted && (cachedData.prediction.toLowerCase().includes('phishing') || cachedData.risk_score >= 80)) {
+        if (!isWhitelisted && isHighRisk(cachedData)) {
           redirectToWarningPage(tabId, url, cachedData);
         }
         return;
@@ -117,7 +124,7 @@ async function handleUrlChange(tabId, url) {
         updateTabBadge(tabId, scanData.risk_score, scanData.prediction);
 
         // Redirect to warning page if it is Phishing or score is above 80 AND not whitelisted
-        if (!isWhitelisted && (scanData.prediction.toLowerCase().includes('phishing') || scanData.risk_score >= 80)) {
+        if (!isWhitelisted && isHighRisk(scanData)) {
           redirectToWarningPage(tabId, url, scanData);
         }
       } catch (scanErr) {
@@ -139,6 +146,7 @@ function redirectToWarningPage(tabId, targetUrl, data) {
   const warningUrl = chrome.runtime.getURL('warning.html') +
     `?url=${encodeURIComponent(targetUrl)}` +
     `&score=${data.risk_score}` +
+    `&verdict=${encodeURIComponent(data.prediction)}` +
     `&reasons=${encodeURIComponent(JSON.stringify(data.reasons))}`;
 
   chrome.tabs.update(tabId, { url: warningUrl });
@@ -164,6 +172,14 @@ function updateTabBadge(tabId, score, prediction) {
   }
 
   chrome.action.setBadgeBackgroundColor({ tabId: tabId, color: badgeColor });
+}
+
+function isHighRisk(data) {
+  const prediction = (data.prediction || '').toLowerCase();
+  return prediction.includes('phishing') ||
+    prediction.includes('malware') ||
+    prediction.includes('danger') ||
+    data.risk_score >= 80;
 }
 
 /**
@@ -194,7 +210,7 @@ async function performScan(targetUrl, apiEndpoint) {
     const normalizedData = normalizeApiResponse(data, targetUrl);
 
     // If score > 80, show a desktop notification
-    if (normalizedData.risk_score > 80) {
+    if (isHighRisk(normalizedData)) {
       triggerHighRiskNotification(normalizedData.url, normalizedData.risk_score, normalizedData.prediction);
     }
 
@@ -217,7 +233,10 @@ function normalizeApiResponse(raw, fallbackUrl) {
     prediction = raw.prediction;
   } else if (raw.verdict) {
     if (raw.verdict === 'DANGEROUS') {
-      prediction = raw.threat_type || 'Phishing';
+      const threatType = String(raw.threat_type || '');
+      prediction = threatType && !['benign', 'safe'].includes(threatType.toLowerCase())
+        ? threatType
+        : 'Dangerous';
     } else if (raw.verdict === 'SUSPICIOUS') {
       prediction = raw.threat_type || 'Suspicious';
     } else {

@@ -1,6 +1,4 @@
 __pycache__/
 node_modules/
 dist/
-
-# Dataset
-backend/dataset/
+backend/dataset/*.csv

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Shield, Eye, Lock, FileText, CheckCircle, Cpu, Terminal, AlertTriangle } from 'lucide-react';
 import { useMeta } from '../hooks/useMeta';
 

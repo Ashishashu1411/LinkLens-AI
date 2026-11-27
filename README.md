@@ -21,13 +21,11 @@
 
 <p align="center">
   <a href="#-key-features">Features</a> •
-  <a href="#-architecture-overview">Architecture</a> •
   <a href="#-tech-stack">Tech Stack</a> •
   <a href="#-project-structure">Structure</a> •
   <a href="#-installation--setup">Installation</a> •
   <a href="#-browser-extension">Extension</a> •
   <a href="#-api-documentation">API Docs</a> •
-  <a href="#-deployment">Deployment</a>
 </p>
 
 ---
@@ -339,7 +337,7 @@ cd frontend
 # Install Node.js dependencies
 npm install
 
-# Start the Vite development server (default: http://localhost:5173)
+# Start the Vite development server (default: http://localhost:5173)gi
 npm run dev
 ```
 

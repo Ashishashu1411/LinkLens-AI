@@ -1,4 +1,3 @@
-import React from 'react';
 import { 
   Shield, HelpCircle, AlertTriangle, Cpu, CheckSquare, 
   Globe, Zap, RefreshCw, Mail, Smartphone, ArrowRight
@@ -46,8 +45,9 @@ export default function About() {
   const roadmap = [
     {
       icon: Globe,
-      title: 'Chrome Browser Extension',
-      desc: 'Real-time alert warnings injected directly into your active browser window when navigating onto suspicious domains.'
+      title: 'Browser Extension',
+      desc: 'Install LinkLens AI for Chrome, Edge, Brave, or Opera and get real-time warnings for suspicious websites.',
+      to: '/extension'
     },
     {
       icon: Zap,
@@ -123,7 +123,7 @@ export default function About() {
 
       {/* Future Scope Title */}
       <div className="text-center mb-10">
-        <h2 className="text-2xl font-extrabold text-foreground mb-2">Future Engineering Roadmap</h2>
+        <h2 className="text-2xl font-extrabold text-foreground mb-2">Browser Extension &amp; Product Roadmap</h2>
         <p className="text-muted-foreground text-sm max-w-md mx-auto">
           Planned extensions for LinkLens AI to expand threat response across platforms.
         </p>
@@ -133,19 +133,41 @@ export default function About() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         {roadmap.map((item, idx) => {
           const RoadmapIcon = item.icon;
-          return (
-            <div 
-              key={idx} 
-              className="glass p-5 border border-[var(--color-border)] hover:border-primary/40 transition-all duration-300 flex items-start gap-4 group"
-            >
+          const cardContent = (
+            <>
               <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center shrink-0 group-hover:bg-primary/10 transition-colors">
                 <RoadmapIcon className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <h3 className="text-sm font-bold text-foreground mb-1 group-hover:text-primary transition-colors">{item.title}</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                {item.to && (
+                  <span className="inline-flex items-center gap-1 mt-3 text-xs font-semibold text-primary">
+                    Download &amp; install
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </span>
+                )}
               </div>
-            </div>
+            </>
+          );
+
+          return (
+            item.to ? (
+              <Link
+                key={idx}
+                to={item.to}
+                className="glass p-5 border border-[var(--color-border)] hover:border-primary/40 transition-all duration-300 flex items-start gap-4 group"
+              >
+                {cardContent}
+              </Link>
+            ) : (
+              <div
+                key={idx}
+                className="glass p-5 border border-[var(--color-border)] hover:border-primary/40 transition-all duration-300 flex items-start gap-4 group"
+              >
+                {cardContent}
+              </div>
+            )
           );
         })}
       </div>

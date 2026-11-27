@@ -11,7 +11,7 @@
   ],
   "host_permissions": [
     "http://localhost/*",
-    "https://linklens-ai-ssu5.onrender.com*",
+    "https://linklens-ai-ssu5.onrender.com/*",
     "<all_urls>"
   ],
   "action": {

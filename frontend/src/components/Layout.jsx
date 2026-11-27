@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
-import { Link, useRouterState } from '@tanstack/react-router';
-import { Shield, Menu, X, Terminal, Search, Activity } from 'lucide-react';
+import { useState } from 'react';
+import { Link } from '@tanstack/react-router';
+import { Shield, Menu, X, Search } from 'lucide-react';
 
 export default function Layout({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const state = useRouterState();
 
   const navLinks = [
     { label: 'Home', to: '/' },

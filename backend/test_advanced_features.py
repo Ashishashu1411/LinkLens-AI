@@ -13,6 +13,40 @@ from extractor import (
     analyze_hidden_control_chars
 )
 
+def run_risk_scoring_tests():
+    from unittest.mock import patch
+    import app
+
+    neutral_live_metrics = {
+        "advanced_analysis": {},
+        "evasion_features": {},
+    }
+
+    cases = [
+        (
+            "https://hacked-websites-compromised.invalid/hacked.html",
+            "SUSPICIOUS",
+            "compromised or defaced"
+        ),
+        (
+            "https://my-blog-hacked.invalid/wp-content/themes/",
+            "SUSPICIOUS",
+            "compromised or defaced"
+        ),
+        (
+            "http://malware-download-portal-unzipped.invalid/installers/update.exe?download=1",
+            "DANGEROUS",
+            "executable download target"
+        ),
+    ]
+
+    for url, expected_verdict, expected_reason in cases:
+        with patch.object(app, "extract_advanced_live_features", return_value=neutral_live_metrics):
+            result = app.analyze_url(app.URLRequest(url=url))
+        assert result["verdict"] == expected_verdict
+        assert any(expected_reason in reason.lower() for reason in result["reasons"])
+
+
 def run_tests():
     print("=== STARTING ADVANCED HEURISTICS TESTS ===")
     
@@ -76,6 +110,10 @@ def run_tests():
     assert analyze_hidden_control_chars("https://google.com/\u202elogin")["detected"]
     assert "Right-to-Left Override (BIDI)" in analyze_hidden_control_chars("https://google.com/\u202elogin")["chars_found"]
     print("[+] Hidden Characters tests passed!")
+
+    print("\nTesting URL-level risk scoring...")
+    run_risk_scoring_tests()
+    print("[+] URL-level risk scoring tests passed!")
 
     print("\n=== ALL TESTS PASSED SUCCESSFULLY! ===")
 

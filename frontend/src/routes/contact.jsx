@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Mail, Shield, MessageSquare, Copy, Check, ArrowRight } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import { useMeta } from '../hooks/useMeta';

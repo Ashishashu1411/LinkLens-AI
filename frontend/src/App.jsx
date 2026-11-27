@@ -1,4 +1,4 @@
-import React from 'react';
+import { lazy, Suspense } from 'react';
 import { 
   createRootRoute, 
   createRoute, 
@@ -13,11 +13,13 @@ import Layout from './components/Layout';
 import Home from './routes/home';
 import Scanner from './routes/scanner';
 import History from './routes/history';
-import Analytics from './routes/analytics';
 import About from './routes/about';
+import ExtensionInstall from './routes/extension-install';
 import Privacy from './routes/privacy';
 import Terms from './routes/terms';
 import Contact from './routes/contact';
+
+const Analytics = lazy(() => import('./routes/analytics'));
 
 // Create a query client
 const queryClient = new QueryClient({
@@ -60,13 +62,23 @@ const historyRoute = createRoute({
 const analyticsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/analytics',
-  component: Analytics
+  component: () => (
+    <Suspense fallback={<div className="py-20 text-center text-muted-foreground">Loading analytics...</div>}>
+      <Analytics />
+    </Suspense>
+  )
 });
 
 const aboutRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/about',
   component: About
+});
+
+const extensionInstallRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/extension',
+  component: ExtensionInstall
 });
 
 const privacyRoute = createRoute({
@@ -94,6 +106,7 @@ const routeTree = rootRoute.addChildren([
   historyRoute,
   analyticsRoute,
   aboutRoute,
+  extensionInstallRoute,
   privacyRoute,
   termsRoute,
   contactRoute

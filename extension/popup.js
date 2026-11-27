@@ -51,7 +51,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- State Variables ---
   let currentUrl = '';
   let activeTabTitle = '';
-  let apiGatewayUrl = 'https://linklens-ai-ssu5.onrender.com'; // Default FastAPI API
+  const DEFAULT_API_URL = 'https://linklens-ai-ssu5.onrender.com/api/analyze';
+  let apiGatewayUrl = DEFAULT_API_URL;
   const MAX_HISTORY_ITEMS = 50;
 
   // Global UI Logger Helper in case of crash
@@ -235,15 +236,19 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       chrome.storage.local.get(['apiUrl'], (res) => {
-        const isUrlValid = res.apiUrl && 
-                           !res.apiUrl.includes('localhost') && 
-                           !res.apiUrl.includes('127.0.0.1') && 
-                           res.apiUrl.endsWith('/api/analyze');
+        let isUrlValid = false;
+        try {
+          const endpoint = new URL(res.apiUrl);
+          isUrlValid = ['http:', 'https:'].includes(endpoint.protocol) &&
+            endpoint.pathname.replace(/\/+$/, '').endsWith('/api/analyze');
+        } catch {
+          isUrlValid = false;
+        }
 
         if (isUrlValid) {
           apiGatewayUrl = res.apiUrl;
         } else {
-          apiGatewayUrl = 'https://linklens-ai-ssu5.onrender.com/api/analyze';
+          apiGatewayUrl = DEFAULT_API_URL;
           chrome.storage.local.set({ apiUrl: apiGatewayUrl });
         }
         if (callback) callback();
@@ -260,8 +265,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!enteredUrl) return;
 
         try {
-          new URL(enteredUrl);
-          apiGatewayUrl = enteredUrl;
+          const endpoint = new URL(enteredUrl);
+          if (!['http:', 'https:'].includes(endpoint.protocol) ||
+              !endpoint.pathname.replace(/\/+$/, '').endsWith('/api/analyze')) {
+            throw new Error('Invalid API endpoint path');
+          }
+          apiGatewayUrl = endpoint.href.replace(/\/+$/, '');
 
           if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
             chrome.storage.local.set({ apiUrl: enteredUrl }, () => {
@@ -277,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setSystemState('online', 'CONFIG MOCKED');
           }
         } catch (e) {
-          alert('Please enter a valid HTTP/HTTPS endpoint gateway URL.');
+          alert('Please enter an HTTP/HTTPS API endpoint ending in /api/analyze.');
         }
       });
     }
@@ -382,7 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (resultDomainAge) resultDomainAge.textContent = domainAge;
 
       if (dangerWarningBanner) {
-        if (predLower.includes('phishing') || riskScore >= 80) {
+        if (predLower.includes('phishing') || predLower.includes('danger') || riskScore >= 80) {
           dangerWarningBanner.classList.remove('hidden');
         } else {
           dangerWarningBanner.classList.add('hidden');

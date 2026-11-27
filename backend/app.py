@@ -135,6 +135,22 @@ def analyze_url(payload: URLRequest):
     # --- Live signal adjustments ---
     ml_confident_benign = (predicted_class == 0 and benign_prob > 60)
 
+    # Apply URL-level risk signals even when the ML model predicts Benign.
+    compromise_terms = ("hacked", "compromised", "stolen", "phish", "malware", "exploit")
+    if raw_features.get("path_has_hacked_terms") or any(term in url.lower() for term in compromise_terms):
+        risk_score = max(risk_score + 25, 40)
+        reasons.append("URL contains terms associated with compromised or defaced content")
+
+    high_risk_extensions = (".exe", ".scr", ".bat", ".cmd", ".msi", ".dll")
+    url_path = url.split("?", 1)[0].split("#", 1)[0].lower()
+    executable_extension = next(
+        (extension for extension in high_risk_extensions if url_path.endswith(extension)),
+        None
+    )
+    if executable_extension:
+        risk_score += 35
+        reasons.append(f"High-risk executable download target ({executable_extension})")
+
     # ── Advanced Heuristics Scoring ──
     advanced = live.get("advanced_analysis", {})
     
